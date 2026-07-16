@@ -2,101 +2,104 @@
 <html lang="en">
 <head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>TikGrid - TikTok Grid Maker</title>
+<title>TikGrid - TikTok Grid Maker</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
-    >
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
-    <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="style.css">
 
 </head>
+
 <body>
 
 <div class="background"></div>
 
 <div class="container">
 
-    <header>
+<header>
 
-        <h1>TikGrid</h1>
+<h1>TikGrid</h1>
 
-        <p>
-            Create seamless TikTok profile grids in seconds.
-        </p>
+<p>Create seamless TikTok profile grids in seconds.</p>
 
-    </header>
+</header>
 
-    <section class="card upload-card">
+<section class="card upload-card" id="uploadCard">
 
-        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+<input
+type="file"
+id="imageInput"
+accept="image/*"
+hidden
+>
 
-        <h2>Upload Image</h2>
+<i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
 
-        <span>Drag & Drop or Click Here</span>
+<h2>Upload Image</h2>
 
-    </section>
+<span>Drag & Drop or Click Here</span>
 
-    <section class="layout-selector">
+</section>
 
-        <button class="layout-btn active">
-            3 Videos
-        </button>
+<section class="layout-selector">
 
-        <button class="layout-btn">
-            9 Videos
-        </button>
+<button class="layout-btn active" data-ratio="3">
+3 Videos
+</button>
 
-    </section>
+<button class="layout-btn" data-ratio="1">
+9 Videos
+</button>
 
-    <section class="card">
+</section>
 
-        <h3>Crop Preview</h3>
+<section class="card">
 
-        <div class="placeholder">
-            Coming Soon...
-        </div>
+<h3>Crop Image</h3>
 
-    </section>
+<div class="crop-container">
 
-    <section class="card">
+<img id="cropImage">
 
-        <h3>Generated Tiles</h3>
+</div>
 
-        <div class="tiles">
+</section>
 
-            <div></div>
-            <div></div>
-            <div></div>
+<section class="card">
 
-            <div></div>
-            <div></div>
-            <div></div>
+<button id="generateBtn" class="layout-btn active">
+Generate
+</button>
 
-            <div></div>
-            <div></div>
-            <div></div>
+</section>
 
-        </div>
+<section class="card">
 
-    </section>
+<h3>Generated Tiles</h3>
+
+<div id="tiles" class="tiles"></div>
+
+</section>
 
 </div>
 
 <div class="credit">
 
-    @des1ngner_caesar
+@des1ngner_caesar
 
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 
 <script src="script.js"></script>
 
