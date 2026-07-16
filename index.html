@@ -1,107 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>TikGrid - TikTok Grid Maker</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
-
-<link rel="stylesheet" href="style.css">
-
+<title>TikTok Grid Repost Splitter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  p.sub { color: #555; margin-top: 0; font-size: 14px; }
+  .row { display: flex; gap: 12px; align-items: center; margin: 16px 0; flex-wrap: wrap; }
+  input[type=file] { padding: 6px 0; }
+  select, button { font-size: 14px; padding: 8px 12px; border: 1px solid #333; background: #fff; cursor: pointer; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button.primary { background: #111; color: #fff; }
+  #preview { display: grid; gap: 4px; margin-top: 20px; }
+  #preview img { width: 100%; display: block; background: #000; }
+  .tile { position: relative; }
+  .tile span { position: absolute; top: 4px; left: 4px; background: #111; color: #fff; font-size: 12px; padding: 2px 6px; }
+  .tile a { position: absolute; bottom: 4px; right: 4px; background: #111; color: #fff; font-size: 11px; padding: 2px 6px; text-decoration: none; }
+  .note { font-size: 13px; color: #444; background: #f2f2f2; padding: 10px 12px; margin-top: 16px; border-left: 3px solid #111; }
+</style>
 </head>
-
 <body>
 
-<div class="background"></div>
+<h1>TikTok Grid Repost Splitter</h1>
+<p class="sub">Upload an image, split it into 3 or 9 pieces sized for TikTok covers (1080×1920), then post them so they line up as one image on your profile grid.</p>
 
-<div class="container">
-
-<header>
-
-<h1>TikGrid</h1>
-
-<p>Create seamless TikTok profile grids in seconds.</p>
-
-</header>
-
-<section class="card upload-card" id="uploadCard">
-
-<input
-type="file"
-id="imageInput"
-accept="image/*"
-hidden
->
-
-<i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-
-<h2>Upload Image</h2>
-
-<span>Drag & Drop or Click Here</span>
-
-</section>
-
-<section class="layout-selector">
-
-<button class="layout-btn active" data-ratio="3">
-3 Videos
-</button>
-
-<button class="layout-btn" data-ratio="1">
-9 Videos
-</button>
-
-</section>
-
-<section class="card">
-
-<h3>Crop Image</h3>
-
-<div class="crop-container">
-
-<img id="cropImage">
-
+<div class="row">
+  <input type="file" id="fileInput" accept="image/*">
+  <select id="pieceCount">
+    <option value="3">3 pieces (1 row)</option>
+    <option value="9">9 pieces (3×3 grid)</option>
+  </select>
+  <button id="generateBtn" class="primary" disabled>Generate</button>
+  <button id="zipBtn" disabled>Download all (.zip)</button>
 </div>
 
-</section>
-
-<section class="card">
-
-<button id="generateBtn" class="layout-btn active">
-Generate
-</button>
-
-</section>
-
-<section class="card">
-
-<h3>Generated Tiles</h3>
-
-<div id="tiles" class="tiles"></div>
-
-</section>
-
+<div id="preview"></div>
+<div class="note" id="orderNote" style="display:none;">
+  Post order matters: TikTok's profile grid puts your newest video first (top-left). Post piece <b id="lastPiece"></b> first and piece <b>1</b> last, so the grid fills in the right order.
 </div>
 
-<div class="credit">
+<script>
+const fileInput = document.getElementById('fileInput');
+const pieceCount = document.getElementById('pieceCount');
+const generateBtn = document.getElementById('generateBtn');
+const zipBtn = document.getElementById('zipBtn');
+const preview = document.getElementById('preview');
+const orderNote = document.getElementById('orderNote');
+const lastPieceEl = document.getElementById('lastPiece');
 
-@des1ngner_caesar
+let img = null;
+let tileBlobs = [];
 
-</div>
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    img = new Image();
+    img.onload = () => { generateBtn.disabled = false; };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+});
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+generateBtn.addEventListener('click', () => {
+  if (!img) return;
+  const n = parseInt(pieceCount.value, 10);
+  const cols = 3;
+  const rows = n / 3;
 
-<script src="script.js"></script>
+  // TikTok grid cell shows roughly a 3:4 crop of each 9:16 cover.
+  const cellW = 3, cellH = 4;
+  const targetAspect = (cols * cellW) / (rows * cellH);
+
+  let srcW = img.width, srcH = img.height;
+  let cropW = srcW, cropH = srcH, cropX = 0, cropY = 0;
+  const srcAspect = srcW / srcH;
+  if (srcAspect > targetAspect) {
+    cropW = srcH * targetAspect;
+    cropX = (srcW - cropW) / 2;
+  } else {
+    cropH = srcW / targetAspect;
+    cropY = (srcH - cropH) / 2;
+  }
+
+  const tileSrcW = cropW / cols;
+  const tileSrcH = cropH / rows;
+
+  preview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  preview.innerHTML = '';
+  tileBlobs = [];
+
+  let pending = n;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const index = r * cols + c + 1; // 1-based, reading order
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, 1080, 1920);
+
+      const drawH = 1080 * (cellH / cellW); // 1440
+      const offsetY = (1920 - drawH) / 2;   // 240
+
+      ctx.drawImage(
+        img,
+        cropX + c * tileSrcW, cropY + r * tileSrcH, tileSrcW, tileSrcH,
+        0, offsetY, 1080, drawH
+      );
+
+      const wrap = document.createElement('div');
+      wrap.className = 'tile';
+      const label = document.createElement('span');
+      label.textContent = index;
+      wrap.appendChild(label);
+
+      canvas.toBlob(blob => {
+        tileBlobs[index - 1] = blob;
+        const url = URL.createObjectURL(blob);
+        const imgEl = document.createElement('img');
+        imgEl.src = url;
+        wrap.insertBefore(imgEl, label);
+
+        const dl = document.createElement('a');
+        dl.href = url;
+        dl.download = `piece-${index}.png`;
+        dl.textContent = 'download';
+        wrap.appendChild(dl);
+
+        pending--;
+        if (pending === 0) zipBtn.disabled = false;
+      }, 'image/png');
+
+      preview.appendChild(wrap);
+    }
+  }
+
+  lastPieceEl.textContent = n;
+  orderNote.style.display = 'block';
+});
+
+zipBtn.addEventListener('click', async () => {
+  const zip = new JSZip();
+  tileBlobs.forEach((blob, i) => zip.file(`piece-${i + 1}.png`, blob));
+  const content = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(content);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tiktok-grid-pieces.zip';
+  a.click();
+});
+</script>
 
 </body>
 </html>
